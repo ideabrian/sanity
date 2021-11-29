@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 /* eslint-disable no-eq-null */
 /* eslint-disable max-depth */
 /**
@@ -8,6 +9,7 @@
 import {isEqual, flatten} from 'lodash'
 import {
   Editor,
+  Element as SlateElement,
   Operation,
   Path,
   SplitNodeOperation,
@@ -203,7 +205,7 @@ function transformOperation(editor: Editor, patch: Patch, operation: Operation):
   if (patch.type === 'diffMatchPatch') {
     const blockIndex = editor.children.findIndex((blk) => isEqual({_key: blk._key}, patch.path[0]))
     const block = editor.children[blockIndex]
-    if (block && Array.isArray(block.children)) {
+    if (SlateElement.isElement(block) && Array.isArray(block.children)) {
       const childIndex = block.children.findIndex((child) =>
         isEqual({_key: child._key}, patch.path[2])
       )
@@ -226,6 +228,7 @@ function transformOperation(editor: Editor, patch: Patch, operation: Operation):
       }
 
       if (
+        (operation.type === 'insert_text' || operation.type === 'remove_text') &&
         Path.isPath(operation.path) &&
         operation.path[0] !== undefined &&
         operation.path[0] === blockIndex &&
@@ -293,19 +296,21 @@ function adjustBlockPath(
   operation: Operation,
   level: number
 ): Operation {
-  const transformedOperation = {...operation}
   const myIndex = editor.children.findIndex((blk) => isEqual({_key: blk._key}, patch.path[0]))
   if (
     myIndex >= 0 &&
+    operation.type !== 'set_selection' &&
     Array.isArray(operation.path) &&
     operation.path[0] !== undefined &&
     operation.path[0] >= myIndex + level
   ) {
+    const transformedOperation = {...operation}
     const newPath = [operation.path[0] + level, ...operation.path.slice(1)]
     debug(`Adjusting ${operation.type} for block ${patch.type}`, operation.path, newPath)
     transformedOperation.path = newPath
+    return transformedOperation
   }
-  return transformedOperation
+  return operation
 }
 
 // Helper functions for editor.apply above

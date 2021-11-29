@@ -2,7 +2,7 @@
 /* eslint-disable complexity */
 import {Editor, Transforms, Path, Range, Element} from 'slate'
 import isHotkey from 'is-hotkey'
-import {ReactEditor} from '@sanity/slate-react'
+import {ReactEditor} from 'slate-react'
 import {PortableTextFeatures} from '../../types/portableText'
 import {PortableTextSlateEditor} from '../../types/editor'
 import {HotkeyOptions} from '../../types/options'
@@ -172,7 +172,7 @@ export function createWithHotkeys(
           // Just ignore
         }
         // List item enter key
-        if (focusBlock && focusBlock.listItem) {
+        if (Element.isElement(focusBlock) && 'listItem' in focusBlock) {
           if (editor.pteEndList()) {
             event.preventDefault()
           }

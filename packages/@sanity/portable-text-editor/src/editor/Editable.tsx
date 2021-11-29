@@ -1,9 +1,9 @@
-import {Transforms, Node} from 'slate'
+import {Transforms, Node, Element as SlateElement, Descendant} from 'slate'
 import {isEqual} from 'lodash'
 import isHotkey from 'is-hotkey'
 import {normalizeBlock} from '@sanity/block-tools'
 import React, {useCallback, useMemo, useState, useEffect, useRef, forwardRef} from 'react'
-import {Editable as SlateEditable, Slate, ReactEditor, withReact} from '@sanity/slate-react'
+import {Editable as SlateEditable, Slate, ReactEditor, withReact} from 'slate-react'
 import {
   EditorSelection,
   OnBeforeInputFn,
@@ -124,21 +124,19 @@ export const PortableTextEditable = forwardRef(function PortableTextEditable(
     [portableTextEditor.slateInstance, withEditableAPI, withHotKeys, withInsertData]
   )
 
-  // Track editor value
-  const [stateValue, setStateValue] = useState(
-    // Default value
-    toSlateValue(
-      getValueOrIntitialValue(value, [placeHolderBlock]),
-      portableTextFeatures.types.block.name,
-      KEY_TO_SLATE_ELEMENT.get(portableTextEditor.slateInstance)
-    )
-  )
-  const stateValueRef = useRef(stateValue)
-
   // Track selection state
   const [selection, setSelection] = useState(portableTextEditor.slateInstance.selection)
   const selectionRef = useRef(selection)
   const [isSelecting, setIsSelecting] = useState(false)
+  const initialValue = useMemo(
+    () =>
+      toSlateValue(
+        getValueOrIntitialValue(value, [placeHolderBlock]),
+        portableTextFeatures.types.block.name,
+        KEY_TO_SLATE_ELEMENT.get(portableTextEditor.slateInstance)
+      ),
+    []
+  )
 
   const renderElement = useCallback(
     (eProps) => {
@@ -174,14 +172,8 @@ export const PortableTextEditable = forwardRef(function PortableTextEditable(
   )
 
   const handleChange = useCallback(
-    (val: Node[]) => {
+    (val: Descendant[]) => {
       const nextSelection = portableTextEditor.slateInstance.selection
-
-      if (val !== stateValueRef.current) {
-        setStateValue(val)
-        stateValueRef.current = val
-      }
-
       if (nextSelection !== selectionRef.current) {
         setSelection(nextSelection)
         selectionRef.current = nextSelection
@@ -191,8 +183,8 @@ export const PortableTextEditable = forwardRef(function PortableTextEditable(
   )
 
   useEffect(() => {
-    KEY_TO_SLATE_ELEMENT.set(portableTextEditor.slateInstance, {})
-    KEY_TO_VALUE_ELEMENT.set(portableTextEditor.slateInstance, {})
+    KEY_TO_SLATE_ELEMENT.set(portableTextEditor.slateInstance, {} as SlateElement)
+    KEY_TO_VALUE_ELEMENT.set(portableTextEditor.slateInstance, {} as SlateElement)
     return () => {
       KEY_TO_SLATE_ELEMENT.delete(portableTextEditor.slateInstance)
       KEY_TO_VALUE_ELEMENT.delete(portableTextEditor.slateInstance)
@@ -210,17 +202,16 @@ export const PortableTextEditable = forwardRef(function PortableTextEditable(
       return
     }
     const fromMap = VALUE_TO_SLATE_VALUE.get(value || [])
-    if (fromMap === stateValue) {
+    if (fromMap === portableTextEditor.slateInstance.children) {
       debug('Value in sync, not updating value from props')
     } else {
       debug('Setting value from props')
       const slateValueFromProps = toSlateValue(
-        value,
+        getValueOrIntitialValue(value, [placeHolderBlock]),
         portableTextFeatures.types.block.name,
         KEY_TO_SLATE_ELEMENT.get(portableTextEditor.slateInstance)
       )
-      setStateValue(slateValueFromProps)
-      stateValueRef.current = slateValueFromProps
+      portableTextEditor.slateInstance.children = slateValueFromProps
       VALUE_TO_SLATE_VALUE.set(value || [], slateValueFromProps)
       change$.next({type: 'value', value})
     }
@@ -240,10 +231,16 @@ export const PortableTextEditable = forwardRef(function PortableTextEditable(
         const slateRange = toSlateRange(normalizedSelection, portableTextEditor.slateInstance)
         setSelection(slateRange)
         selectionRef.current = slateRange
-      } else if (stateValue) {
+        if (slateRange) {
+          Transforms.select(portableTextEditor.slateInstance, slateRange)
+        } else {
+          Transforms.deselect(portableTextEditor.slateInstance)
+        }
+      } else if (portableTextEditor.slateInstance.children.length > 0) {
         debug('Selecting top document')
         setSelection(SELECT_TOP_DOCUMENT)
         selectionRef.current = SELECT_TOP_DOCUMENT
+        Transforms.select(portableTextEditor.slateInstance, SELECT_TOP_DOCUMENT)
       }
     }
   }, [propsSelection])
@@ -435,13 +432,13 @@ export const PortableTextEditable = forwardRef(function PortableTextEditable(
       currentRef.addEventListener('keydown', onSelectStartWithKeys, false)
       currentRef.addEventListener('keyup', onSelectEndWithKeys, false)
       currentRef.addEventListener('mousedown', onSelectStart, false)
-      currentRef.addEventListener('mouseup', onSelectEnd, false)
+      window.addEventListener('mouseup', onSelectEnd, false) // Must be on window, or we might not catch it if the pointer is another place at the time.
       currentRef.addEventListener('dragend', onSelectEnd, false)
       return () => {
         currentRef.removeEventListener('keydown', onSelectStartWithKeys, false)
         currentRef.removeEventListener('keyup', onSelectEndWithKeys, false)
         currentRef.removeEventListener('mousedown', onSelectStart, false)
-        currentRef.removeEventListener('mouseup', onSelectEnd, false)
+        window.removeEventListener('mouseup', onSelectEnd, false)
         currentRef.removeEventListener('dragend', onSelectEnd, false)
       }
     }
@@ -485,12 +482,7 @@ export const PortableTextEditable = forwardRef(function PortableTextEditable(
   // The editor
   const slateEditable = useMemo(
     () => (
-      <Slate
-        onChange={handleChange}
-        editor={portableTextEditor.slateInstance}
-        selection={selection}
-        value={getValueOrIntitialValue(stateValue, [placeHolderBlock])}
-      >
+      <Slate onChange={handleChange} editor={portableTextEditor.slateInstance} value={initialValue}>
         <SlateEditable
           autoFocus={false}
           className="pt-editable"
@@ -512,6 +504,7 @@ export const PortableTextEditable = forwardRef(function PortableTextEditable(
       </Slate>
     ),
     [
+      initialValue,
       handleChange,
       handleCopy,
       handleCut,
@@ -521,16 +514,13 @@ export const PortableTextEditable = forwardRef(function PortableTextEditable(
       handleOnFocus,
       handlePaste,
       handleSelect,
-      placeHolderBlock,
       placeholderText,
       portableTextEditor.slateInstance,
       readOnly,
       renderElement,
       renderLeaf,
       scrollSelectionIntoViewToSlate,
-      selection,
       spellCheck,
-      stateValue,
     ]
   )
   if (!portableTextEditor) {

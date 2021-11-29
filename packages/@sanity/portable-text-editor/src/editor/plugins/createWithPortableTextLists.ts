@@ -12,25 +12,7 @@ export function createWithPortableTextLists(
   portableTextFeatures: PortableTextFeatures,
   change$: Subject<EditorChange>
 ) {
-  return function withPortableTextLists(editor: PortableTextSlateEditor) {
-    // // Extend Slate's default normalization to set / unset level on .listItem blocks.
-    // const {normalizeNode} = editor
-    // editor.normalizeNode = nodeEntry => {
-    //   normalizeNode(nodeEntry)
-    //   const operations = editor.operations.map(op => {
-    //     if (op.type === 'set_node' && op.newProperties && op.newProperties.listItem) {
-    //       // debug('Normalizing level for list item')
-    //       op.newProperties.level = op.newProperties.level || 1
-    //     } else if (op.newProperties && op.newProperties.level) {
-    //       // TODO: will level be used otherwise? Text indentation?
-    //       // debug('Deleting obsolete level prop from non list item')
-    //       delete op.newProperties.level
-    //     }
-    //     return op
-    //   })
-    //   editor.operations = operations
-    // }
-
+  return function withPortableTextLists(editor: PortableTextSlateEditor): PortableTextSlateEditor {
     editor.pteToggleListItem = (listItemStyle: string) => {
       const isActive = editor.pteHasListStyle(listItemStyle)
       if (isActive) {
@@ -60,9 +42,12 @@ export function createWithPortableTextLists(
         }),
       ]
       selectedBlocks.forEach(([node, path]) => {
-        const {listItem, level, ...rest} = node
-        debug(`Unsetting list '${listItemStyle}'`)
-        Transforms.setNodes(editor, {...rest, listItem: undefined, level: undefined}, {at: path})
+        if (Element.isElement(node)) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const {listItem, level, ...rest} = node
+          debug(`Unsetting list '${listItemStyle}'`)
+          Transforms.setNodes(editor, {...rest, listItem: undefined, level: undefined}, {at: path})
+        }
       })
       // Emit a new selection here (though it might be the same).
       // This is for toolbars etc that listens to selection changes to update themselves.
@@ -82,19 +67,22 @@ export function createWithPortableTextLists(
         }),
       ]
       selectedBlocks.forEach(([node, path]) => {
-        const {listItem, level, ...rest} = node
-        debug(`Setting list '${listItemStyle}'`)
-        Transforms.setNodes(
-          editor,
-          {
-            ...rest,
-            level: 1,
-            listItem:
-              listItemStyle ||
-              (portableTextFeatures.lists[0] && portableTextFeatures.lists[0].value),
-          },
-          {at: path}
-        )
+        if (Element.isElement(node)) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const {listItem, level, ...rest} = node
+          debug(`Setting list '${listItemStyle}'`)
+          Transforms.setNodes(
+            editor,
+            {
+              ...rest,
+              level: 1,
+              listItem:
+                listItemStyle ||
+                (portableTextFeatures.lists[0] && portableTextFeatures.lists[0].value),
+            },
+            {at: path}
+          )
+        }
       })
       // Emit a new selection here (though it might be the same).
       // This is for toolbars etc that listens to selection changes to update themselves.
@@ -121,8 +109,10 @@ export function createWithPortableTextLists(
         return false
       }
       selectedBlocks.forEach(([node, path]) => {
-        debug('Unset list')
-        Transforms.setNodes(editor, {...node, level: undefined, listItem: undefined}, {at: path})
+        if (Element.isElement(node)) {
+          debug('Unset list')
+          Transforms.setNodes(editor, {...node, level: undefined, listItem: undefined}, {at: path})
+        }
       })
       change$.next({type: 'selection', selection: toPortableTextRange(editor)})
       return true // Note: we are exiting the plugin chain by not returning editor (or hotkey plugin 'enter' will fire)
@@ -142,19 +132,21 @@ export function createWithPortableTextLists(
         return false
       }
       selectedBlocks.forEach(([node, path]) => {
-        let level = typeof node.level === 'number' ? node.level : 1
-        if (reverse) {
-          level--
-          debug('Decrementing list level', Math.min(MAX_LIST_LEVEL, Math.max(1, level)))
-        } else {
-          level++
-          debug('Incrementing list level', Math.min(MAX_LIST_LEVEL, Math.max(1, level)))
+        if (Element.isElement(node)) {
+          let level = typeof node.level === 'number' ? node.level : 1
+          if (reverse) {
+            level--
+            debug('Decrementing list level', Math.min(MAX_LIST_LEVEL, Math.max(1, level)))
+          } else {
+            level++
+            debug('Incrementing list level', Math.min(MAX_LIST_LEVEL, Math.max(1, level)))
+          }
+          Transforms.setNodes(
+            editor,
+            {level: Math.min(MAX_LIST_LEVEL, Math.max(1, level))},
+            {at: path}
+          )
         }
-        Transforms.setNodes(
-          editor,
-          {level: Math.min(MAX_LIST_LEVEL, Math.max(1, level))},
-          {at: path}
-        )
       })
       change$.next({type: 'selection', selection: toPortableTextRange(editor)})
       editor.onChange()

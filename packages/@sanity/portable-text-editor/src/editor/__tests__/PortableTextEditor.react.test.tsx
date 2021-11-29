@@ -4,6 +4,7 @@
 /* eslint-disable no-irregular-whitespace */
 // eslint-disable-next-line import/no-unassigned-import
 import '@testing-library/jest-dom/extend-expect'
+import {act} from 'react-dom/test-utils'
 import {render} from '@testing-library/react'
 import React, {ForwardedRef, forwardRef} from 'react'
 
@@ -118,14 +119,16 @@ describe('initialization', () => {
       <div>
         <div>
           <div
+            autocapitalize="false"
+            autocorrect="false"
             class="pt-editable"
             contenteditable="true"
-            data-gramm="false"
             data-slate-editor="true"
             data-slate-node="value"
             role="textbox"
-            spellcheck="true"
-            style="outline: none; white-space: pre-wrap; word-wrap: break-word;"
+            spellcheck="false"
+            style="position: relative; outline: none; white-space: pre-wrap; word-wrap: break-word; min-height: 0px;"
+            zindex="-1"
           >
             <div
               class="pt-block pt-text-block pt-text-block-style-normal"
@@ -145,7 +148,7 @@ describe('initialization', () => {
                         <span
                           contenteditable="false"
                           data-slate-placeholder="true"
-                          style="pointer-events: none; display: inline-block; width: 0px; max-width: 100%; white-space: nowrap; opacity: 0.333; user-select: none; font-style: normal; font-weight: normal; text-decoration: none;"
+                          style="position: absolute; pointer-events: none; width: 100%; max-width: 100%; display: block; opacity: 0.333; user-select: none; text-decoration: none;"
                         >
                           Jot something down here
                         </span>
@@ -173,7 +176,7 @@ describe('initialization', () => {
     render(<PortableTextEditorTester onChange={onChange} type={bodyType} value={initialValue} />)
     expect(onChange).toHaveBeenCalledWith({type: 'value', value: initialValue})
   })
-  it('takes selection from props', () => {
+  it('takes initial selection from props', () => {
     const editorRef: React.RefObject<PortableTextEditor> = React.createRef()
     const initialValue = [helloBlock]
     const initialSelection: EditorSelection = {
@@ -195,6 +198,49 @@ describe('initialization', () => {
     }
     PortableTextEditor.focus(editorRef.current)
     expect(PortableTextEditor.getSelection(editorRef.current)).toEqual(initialSelection)
+  })
+
+  it('updates editor selection from new prop', () => {
+    const editorRef: React.RefObject<PortableTextEditor> = React.createRef()
+    const initialValue = [helloBlock]
+    const initialSelection: EditorSelection = null
+    const newSelection: EditorSelection = {
+      anchor: {path: [{_key: '123'}, 'children', {_key: '567'}], offset: 0},
+      focus: {path: [{_key: '123'}, 'children', {_key: '567'}], offset: 0},
+    }
+    const onChange = jest.fn()
+    const {rerender} = render(
+      <PortableTextEditorTester
+        onChange={onChange}
+        ref={editorRef}
+        selection={initialSelection}
+        type={bodyType}
+        value={initialValue}
+      />
+    )
+    if (!editorRef.current) {
+      throw new Error('No editor')
+    }
+    act(() => {
+      if (editorRef.current) {
+        PortableTextEditor.focus(editorRef.current)
+        expect(PortableTextEditor.getSelection(editorRef.current)).toEqual(initialSelection)
+      }
+    })
+    rerender(
+      <PortableTextEditorTester
+        onChange={onChange}
+        ref={editorRef}
+        selection={newSelection}
+        type={bodyType}
+        value={initialValue}
+      />
+    )
+    act(() => {
+      if (editorRef.current) {
+        expect(PortableTextEditor.getSelection(editorRef.current)).toEqual(newSelection)
+      }
+    })
   })
 })
 
@@ -264,21 +310,27 @@ describe('normalization', () => {
       },
     ]
     const onChange = jest.fn()
-    render(
-      <PortableTextEditorTester
-        onChange={onChange}
-        ref={editorRef}
-        type={bodyType}
-        value={initialValue}
-      />
-    )
+    act(() => {
+      render(
+        <PortableTextEditorTester
+          onChange={onChange}
+          ref={editorRef}
+          type={bodyType}
+          value={initialValue}
+        />
+      )
+    })
     if (!editorRef.current) {
       throw new Error('No editor')
     }
-    PortableTextEditor.focus(editorRef.current)
-    PortableTextEditor.select(editorRef.current, {
-      focus: {path: [{_key: '5fc57af23597'}, 'children', {_key: '11c8c9f783a8'}], offset: 4},
-      anchor: {path: [{_key: '5fc57af23597'}, 'children', {_key: '11c8c9f783a8'}], offset: 0},
+    act(() => {
+      if (editorRef.current) {
+        PortableTextEditor.focus(editorRef.current)
+        PortableTextEditor.select(editorRef.current, {
+          focus: {path: [{_key: '5fc57af23597'}, 'children', {_key: '11c8c9f783a8'}], offset: 4},
+          anchor: {path: [{_key: '5fc57af23597'}, 'children', {_key: '11c8c9f783a8'}], offset: 0},
+        })
+      }
     })
     const linkType = PortableTextEditor.getPortableTextFeatures(editorRef.current).annotations.find(
       (a) => a.type.name === 'link'
@@ -286,7 +338,11 @@ describe('normalization', () => {
     if (!linkType) {
       throw new Error('No link type found')
     }
-    PortableTextEditor.removeAnnotation(editorRef.current, linkType)
+    act(() => {
+      if (editorRef.current) {
+        PortableTextEditor.removeAnnotation(editorRef.current, linkType)
+      }
+    })
     expect(PortableTextEditor.getValue(editorRef.current)).toEqual([
       {
         _key: '5fc57af23597',

@@ -1,5 +1,5 @@
 import {Subject} from 'rxjs'
-import {Editor, Transforms, Element, Path} from 'slate'
+import {Editor, Transforms, Element, Path, Text as SlateText} from 'slate'
 import {PortableTextFeatures} from '../../types/portableText'
 import {EditorChange, PortableTextSlateEditor} from '../../types/editor'
 import {debugWithName} from '../../utils/debug'
@@ -11,7 +11,9 @@ export function createWithPortableTextBlockStyle(
   portableTextFeatures: PortableTextFeatures,
   change$: Subject<EditorChange>
 ) {
-  return function withPortableTextBlockStyle(editor: PortableTextSlateEditor) {
+  return function withPortableTextBlockStyle(
+    editor: PortableTextSlateEditor
+  ): PortableTextSlateEditor {
     const normalStyle = portableTextFeatures.styles[0].value
     // Extend Slate's default normalization to reset split node to normal style
     // if there is no text at the right end of the split.
@@ -23,12 +25,13 @@ export function createWithPortableTextBlockStyle(
         if (
           op.type === 'split_node' &&
           op.path.length === 1 &&
+          Element.isElement(op.properties) &&
           op.properties.style !== normalStyle &&
           op.path[0] === path[0] &&
           !Path.equals(path, op.path)
         ) {
           const [child] = Editor.node(editor, [op.path[0] + 1, 0])
-          if (child.text === '') {
+          if (SlateText.isText(child) && child.text === '') {
             debug(`Normalizing split node to ${normalStyle} style`, op)
             Transforms.setNodes(editor, {style: normalStyle}, {at: [op.path[0] + 1], voids: false})
             break
@@ -64,8 +67,9 @@ export function createWithPortableTextBlockStyle(
         }),
       ]
       selectedBlocks.forEach(([node, path]) => {
-        const {style, ...rest} = node
-        if (node.style === blockStyle) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const {style, ...rest} = node as Element
+        if (Element.isElement(node) && node.style === blockStyle) {
           debug(`Unsetting block style '${blockStyle}'`)
           Transforms.setNodes(editor, {...rest, style: undefined}, {at: path})
         } else {

@@ -3,7 +3,16 @@
 import * as DMP from 'diff-match-patch'
 import {debounce, isEqual} from 'lodash'
 import {Subject} from 'rxjs'
-import {Editor, Operation, Transforms, Path, Node, Range} from 'slate'
+import {
+  Editor,
+  Operation,
+  Transforms,
+  Path,
+  Node,
+  Range,
+  Text as SlateText,
+  Element as SlateElement,
+} from 'slate'
 import {setIfMissing, unset} from '../../patch/PatchEvent'
 import type {Patch} from '../../types/patch'
 
@@ -113,7 +122,6 @@ export function createWithPatches(
       if (editorWasEmpty && operation.type !== 'set_selection') {
         patches = [setIfMissing(previousChildren, [])]
       }
-
       switch (operation.type) {
         case 'insert_text':
           patches = [...patches, ...insertTextPatch(editor, operation, previousChildren)]
@@ -293,7 +301,7 @@ function adjustSelection(
     if (selection.focus.path[0] === blockIndex && selection.focus.path[2] >= childIndex) {
       const prevIndexOrLastIndex =
         childIndex === -1 || block.children.length === 1 ? block.children.length - 1 : childIndex
-      const prevText = block.children[prevIndexOrLastIndex].text as Text
+      const prevText = block.children[prevIndexOrLastIndex].text
       const newSelection = {...selection}
       if (Path.endsAt(selection.anchor.path, [blockIndex, prevIndexOrLastIndex])) {
         newSelection.anchor = {...selection.anchor}
@@ -429,18 +437,20 @@ function adjustSelection(
     }
     if (selection.focus.path[0] === blockIndex && selection.focus.path[1] === childIndex) {
       const nextIndex = childIndex + patch.items.length
-      const blockChildren = editor.children[blockIndex].children as Node[]
+      const iBlock = editor.children[blockIndex]
+      const blockChildren = SlateElement.isElement(iBlock) && (iBlock.children as Node[])
       const nextBlock = editor.children[blockIndex + 1]
       const item = patch.items[0] as PortableTextBlock
+      const nextChild = blockChildren && blockChildren[nextIndex]
       const isSplitOperation =
-        !blockChildren[nextIndex] &&
+        !nextChild &&
         Editor.isBlock(editor, nextBlock) &&
         nextBlock.children &&
         nextBlock.children[0] &&
         typeof nextBlock.children[0]._key === 'string' &&
         isEqual(nextBlock.children[0]._key, item._key)
       const [node] = Editor.node(editor, selection)
-      const nodeText = node.text as Text
+      const nodeText = SlateText.isText(node) && node.text
       if (!nodeText) {
         return null
       }

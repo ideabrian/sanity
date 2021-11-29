@@ -1,5 +1,4 @@
-import {Transforms, Node, Editor, Range} from 'slate'
-import {ReactEditor} from '@sanity/slate-react'
+import {Transforms, Node, Editor, Range, Element} from 'slate'
 import {htmlToBlocks, normalizeBlock} from '@sanity/block-tools'
 import {PortableTextFeatures, PortableTextBlock} from '../../types/portableText'
 import {EditorChanges, PortableTextSlateEditor} from '../../types/editor'
@@ -18,7 +17,7 @@ export function createWithInsertData(
   portableTextFeatures: PortableTextFeatures,
   keyGenerator: () => string
 ) {
-  return function withInsertData(editor: PortableTextSlateEditor & ReactEditor) {
+  return function withInsertData(editor: PortableTextSlateEditor): PortableTextSlateEditor {
     const {setFragmentData} = editor
     editor.setFragmentData = (data: DataTransfer) => {
       debug('Set fragment data')
@@ -28,7 +27,7 @@ export function createWithInsertData(
       debug('Get fragment data')
       if (editor.selection) {
         const fragment = Node.fragment(editor, editor.selection).map((node) => {
-          const newNode = {...node}
+          const newNode: Element = {...(node as Element)}
           // Ensure the copy has new keys
           if (newNode.markDefs && Array.isArray(newNode.markDefs)) {
             newNode.markDefs = newNode.markDefs.map((def) => {
@@ -39,10 +38,11 @@ export function createWithInsertData(
                   child._type === portableTextFeatures.types.span.name
                     ? {
                         ...child,
-                        marks: child.marks.includes(oldKey)
-                          ? // eslint-disable-next-line max-nested-callbacks
-                            [...child.marks].filter((mark) => mark !== oldKey).concat(newKey)
-                          : child.marks,
+                        marks:
+                          child.marks && child.marks.includes(oldKey)
+                            ? // eslint-disable-next-line max-nested-callbacks
+                              [...child.marks].filter((mark) => mark !== oldKey).concat(newKey)
+                            : child.marks,
                       }
                     : child
                 )
@@ -50,7 +50,7 @@ export function createWithInsertData(
               return {...def, _key: newKey}
             })
           }
-          const nodeWithNewKeys = {...newNode, _key: keyGenerator()} as Node
+          const nodeWithNewKeys = {...newNode, _key: keyGenerator()} as Element
           if (Array.isArray(nodeWithNewKeys.children)) {
             nodeWithNewKeys.children = nodeWithNewKeys.children.map((child) => ({
               ...child,
@@ -155,8 +155,8 @@ export function createWithInsertData(
           insertAtPath = [insertAtPath[0] + 1]
         }
         fragment.forEach((blk, blkIndex) => {
-          const {markDefs} = blk
-          if (fragment[0] === blk && !focusIsVoid) {
+          if (Element.isElement(blk) && fragment[0] === blk && !focusIsVoid) {
+            const {markDefs} = blk
             const isVoid = Editor.isVoid(editor, fragment[0])
             const isEmptyText = isEqualToEmptyEditor([focusBlock], portableTextFeatures)
             if (isEmptyText && isVoid) {
@@ -179,7 +179,9 @@ export function createWithInsertData(
                 editor,
                 {
                   markDefs: [
-                    ...(Array.isArray(focusBlock.markDefs) ? focusBlock.markDefs : []),
+                    ...(Element.isElement(focusBlock) && Array.isArray(focusBlock.markDefs)
+                      ? focusBlock.markDefs
+                      : []),
                     ...(Array.isArray(markDefs) ? markDefs : []),
                   ],
                 },
@@ -187,13 +189,13 @@ export function createWithInsertData(
               )
               // If the focus block is not empty, use the style from the block.
               if (
-                isEmptyText ||
+                (Element.isElement(focusBlock) && isEmptyText) ||
                 (originalSelection.anchor.path[0] === 0 &&
                   originalSelection.anchor.path[1] === 0 &&
                   originalSelection.anchor.offset === 0)
               ) {
                 Transforms.setNodes(editor, {style: blk.style}, {at: insertAtPath})
-              } else {
+              } else if (Element.isElement(focusBlock)) {
                 Transforms.setNodes(editor, {style: focusBlock.style}, {at: insertAtPath})
               }
             }

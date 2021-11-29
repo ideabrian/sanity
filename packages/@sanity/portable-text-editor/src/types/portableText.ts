@@ -12,6 +12,9 @@ export type TextBlock = {
   _key: string
   children: PortableTextChild[]
   markDefs: MarkDef[]
+  listItem?: string
+  style?: string
+  level?: number
 }
 
 export type TextSpan = {

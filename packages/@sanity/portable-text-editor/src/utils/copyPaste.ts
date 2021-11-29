@@ -1,7 +1,8 @@
-import {Range, Editor, Node as SlateNode} from 'slate'
-import {ReactEditor} from '@sanity/slate-react'
+import {Range, Editor, Node as SlateNode, Element} from 'slate'
+import {ReactEditor} from 'slate-react'
 import {fromSlateValue} from '../utils/values'
 import {PortableTextFeatures} from '../types/portableText'
+import {PortableTextSlateEditor} from '..'
 import {KEY_TO_VALUE_ELEMENT} from './weakMaps'
 
 type DOMNode = globalThis.Node
@@ -31,7 +32,7 @@ export const hasEditableTarget = (
 
 export const setFragmentData = (
   dataTransfer: DataTransfer,
-  editor: ReactEditor,
+  editor: PortableTextSlateEditor,
   portableTextFeatures: PortableTextFeatures
 ): void => {
   const {selection} = editor
@@ -99,10 +100,13 @@ export const setFragmentData = (
     attach = span
   }
 
-  const fragment = fromSlateValue(
-    SlateNode.fragment(editor, selection),
-    portableTextFeatures.types.block.name,
-    KEY_TO_VALUE_ELEMENT.get(editor)
-  )
-  dataTransfer.setData('application/x-portable-text', JSON.stringify(fragment))
+  const node = KEY_TO_VALUE_ELEMENT.get(editor)
+  if (node && Element.isElement(node)) {
+    const fragment = fromSlateValue(
+      SlateNode.fragment(editor, selection),
+      portableTextFeatures.types.block.name,
+      node.value
+    )
+    dataTransfer.setData('application/x-portable-text', JSON.stringify(fragment))
+  }
 }
