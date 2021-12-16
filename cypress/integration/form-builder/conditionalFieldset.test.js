@@ -1,3 +1,4 @@
+/* eslint-disable cypress/no-unnecessary-waiting */
 import testSanityClient from '../../helpers/sanityClientSetUp'
 
 const testDocumentId = 'conditional-fieldset-test'
@@ -116,26 +117,31 @@ describe('@sanity/field: Multi fieldset and review changes', () => {
 
   // Hidden boolean false
   it('when hidden property is false, the review change for fieldset is rendered', () => {
+    cy.wait(6000)
     cy.get('[data-testid="group-change-multiHiddenBooleanFalse"]').should('be.visible')
   })
 
   // Hidden boolean true
   it('when hidden property is true, the review change for fieldset is not rendered', () => {
+    cy.wait(6000)
     cy.get('[data-testid="group-change-multiHiddenBooleanTrue"]').should('not.exist')
   })
 
   // Hidden callback (document) false
   it('when the hidden callback (document) returns false, the review change for fieldset is rendered', () => {
+    cy.wait(6000)
     cy.get('[data-testid="group-change-multiHiddenCallbackFalse"]').should('be.visible')
   })
 
   // Hidden callback (document) true
   it('when the hidden callback (document) returns true, the review change for fieldset is not rendered', () => {
+    cy.wait(6000)
     cy.get('[data-testid="group-change-multiHiddenCallbackTrue"]').should('not.exist')
   })
 
   // Read only boolean false
   it('when the readOnly property is false, the review change for fieldset is enabled', () => {
+    cy.wait(6000)
     cy.get('[data-testid="group-change-revert-button-multiReadOnlyBooleanFalse"]').should(
       'not.be.disabled'
     )
@@ -150,6 +156,7 @@ describe('@sanity/field: Multi fieldset and review changes', () => {
 
   // Read only boolean true
   it('when the readOnly property is true, the review change for fieldset is disabled', () => {
+    cy.wait(6000)
     cy.get('[data-testid="group-change-revert-button-multiReadOnlyBooleanTrue"]').should(
       'be.disabled'
     )
@@ -164,6 +171,7 @@ describe('@sanity/field: Multi fieldset and review changes', () => {
 
   // Read only callback (document) false
   it('when the readOnly callback (document) returns false, the review change for fieldset is enabled', () => {
+    cy.wait(6000)
     cy.get('[data-testid="group-change-revert-button-multiReadOnlyCallbackFalse"]').should(
       'not.be.disabled'
     )
@@ -178,6 +186,7 @@ describe('@sanity/field: Multi fieldset and review changes', () => {
 
   // Read only callback (document) true
   it('when the readOnly callback (document) returns true, the review change for fieldset is disabled', () => {
+    cy.wait(6000)
     cy.get('[data-testid="group-change-revert-button-multiReadOnlyCallbackTrue"]').should(
       'be.disabled'
     )
@@ -287,6 +296,7 @@ describe('@sanity/field: Single fieldset and review changes', () => {
 
   // Hidden boolean false
   it('when hidden property is false, the review change for fieldset is rendered', () => {
+    cy.wait(6000)
     cy.get('[data-testid="single-change-revert-button-singleHiddenBooleanFalse1"').should(
       'be.visible'
     )
@@ -294,6 +304,7 @@ describe('@sanity/field: Single fieldset and review changes', () => {
 
   // Hidden boolean true
   it('when hidden property is true, the review change for fieldset is not rendered', () => {
+    cy.wait(6000)
     cy.get('[data-testid="single-change-revert-button-singleHiddenBooleanTrue1"').should(
       'not.exist'
     )
@@ -301,6 +312,7 @@ describe('@sanity/field: Single fieldset and review changes', () => {
 
   // Hidden callback (document) false
   it('when hidden callback (document) returns false, the review change for fieldset is rendered', () => {
+    cy.wait(6000)
     cy.get('[data-testid="single-change-revert-button-singleHiddenCallbackFalse1"').should(
       'be.visible'
     )
@@ -308,6 +320,7 @@ describe('@sanity/field: Single fieldset and review changes', () => {
 
   // Hidden callback (document) true
   it('when hidden callback (document) returns true, the review change for fieldset is not rendered', () => {
+    cy.wait(6000)
     cy.get('[data-testid="single-change-revert-button-singleHiddenCallbackTrue1"').should(
       'not.exist'
     )
@@ -315,6 +328,7 @@ describe('@sanity/field: Single fieldset and review changes', () => {
 
   // Read only boolean false
   it('when readOnly property is false, the review change for fieldset is enabled', () => {
+    cy.wait(6000)
     cy.get('[data-testid="single-change-revert-button-singleReadOnlyBooleanFalse1"').should(
       'not.be.disabled'
     )
@@ -322,6 +336,7 @@ describe('@sanity/field: Single fieldset and review changes', () => {
 
   // Read only boolean true
   it('when readOnly property is true, the review change for fieldset is disabled', () => {
+    cy.wait(6000)
     cy.get('[data-testid="single-change-revert-button-singleReadOnlyBooleanTrue1"').should(
       'be.disabled'
     )
@@ -329,6 +344,7 @@ describe('@sanity/field: Single fieldset and review changes', () => {
 
   // Read only callback (document) false
   it('when readOnly callback (document) (document) returns false, the review change for fieldset is not disabled', () => {
+    cy.wait(6000)
     cy.get('[data-testid="single-change-revert-button-singleReadOnlyCallbackFalse1"').should(
       'not.be.disabled'
     )
@@ -336,6 +352,7 @@ describe('@sanity/field: Single fieldset and review changes', () => {
 
   // Read only callback (document) true
   it('when readOnly callback (document) returns true, the review change for fieldset is disabled', () => {
+    cy.wait(6000)
     cy.get('[data-testid="single-change-revert-button-singleReadOnlyCallbackTrue1"').should(
       'be.disabled'
     )
